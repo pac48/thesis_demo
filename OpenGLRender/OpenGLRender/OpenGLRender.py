@@ -1,5 +1,6 @@
 import os.path
 
+import numpy
 import numpy as np
 from OpenGL.GL import *
 from OpenGL.GLUT import *
@@ -10,7 +11,7 @@ class Camera:
     def __init__(self, fov, aspect_ratio):
         self.model_matrix = np.array([[1.0, 0.0, 0.0, 0.0],
                                       [0.0, 1.0, 0.0, 0.0],
-                                      [0.0, 0.0, 1.0, 0.0],
+                                      [0.0, 0.0, 1.0, -1.0],
                                       [0.0, 0.0, 0.0, 1.0]], dtype=np.float32)
         self.projection_matrix = self.perspective_projection_matrix(fov, aspect_ratio, 0.1, 100)
 
@@ -38,6 +39,8 @@ class OpenGLRender:
         self.width = width_in
         self.triangle_data = []
         self.cam = Camera(80, float(width_in) / height_in)
+        self.light_dir = numpy.array([0.0, 0.0, -1.0])
+
         self.fbo = []
         self.vbo = []
         self.vao = []
@@ -85,13 +88,21 @@ class OpenGLRender:
         glBindVertexArray(self.vao)
 
         positionAttributeLocation = glGetAttribLocation(self.main_shader, 'position')
-        glVertexAttribPointer(positionAttributeLocation, 3, GL_FLOAT, GL_FALSE, self.float_size(6),
+        glVertexAttribPointer(positionAttributeLocation, 3, GL_FLOAT, GL_FALSE, self.float_size(10),
                               self.pointer_offset(0))
         colorAttributeLocation = glGetAttribLocation(self.main_shader, 'color')
-        glVertexAttribPointer(colorAttributeLocation, 3, GL_FLOAT, GL_FALSE, self.float_size(6), self.pointer_offset(3))
+        glVertexAttribPointer(colorAttributeLocation, 4, GL_FLOAT, GL_FALSE, self.float_size(10),
+                              self.pointer_offset(3))
 
-        glEnableVertexAttribArray(0)
-        glEnableVertexAttribArray(1)
+        normalAttributeLocation = glGetAttribLocation(self.main_shader, 'normal')
+        normalAttributeLocation = 2
+
+        glVertexAttribPointer(normalAttributeLocation, 3, GL_FLOAT, GL_FALSE, self.float_size(10),
+                              self.pointer_offset(7))
+
+        glEnableVertexAttribArray(positionAttributeLocation)
+        glEnableVertexAttribArray(colorAttributeLocation)
+        glEnableVertexAttribArray(normalAttributeLocation)
 
     def setTriangleData(self, triangle_data_in):
         assert triangle_data_in.dtype == np.float32, "Array must be of type float32"
@@ -170,7 +181,10 @@ class OpenGLRender:
         projection_location = glGetUniformLocation(self.main_shader, "projection")
         glUniformMatrix4fv(projection_location, 1, GL_TRUE, self.cam.projection_matrix)
 
-        glDrawArrays(GL_TRIANGLES, 0, self.triangle_data.size // 6)  # render 3 vert starting at position 0
+        light_dir_location = glGetUniformLocation(self.main_shader, "lightDir")
+        glUniform3fv(light_dir_location, 1, self.light_dir)
+
+        glDrawArrays(GL_TRIANGLES, 0, self.triangle_data.size // 10)  # render 3 vert starting at position 0
 
         img = glReadPixels(0, 0, self.width, self.height, GL_RGB, GL_UNSIGNED_BYTE)
         img = np.frombuffer(img, dtype=np.uint8).reshape((self.height, self.width, 3))

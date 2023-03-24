@@ -1,17 +1,20 @@
 attribute vec3 position;
-attribute vec3 color;
-attribute vec2 uv;
+attribute vec4 color;
+attribute vec3 normal;
+//attribute vec2 uv;
 
 uniform mat4 projection;
 uniform mat4 model;
 
-varying vec3 fg_color;
-varying vec2 TexCoord;
+varying vec4 fg_color;
+//varying vec2 fg_texCoord;
+varying vec3 fg_normal;
 
 void main()
 {
     fg_color = color;
     gl_Position = projection  * model * vec4(position, 1.0);
 
-    TexCoord = uv;
+//    fg_texCoord = uv;
+    fg_normal = mat3(model) * normal;
 }
