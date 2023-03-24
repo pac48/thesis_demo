@@ -8,13 +8,46 @@ WINDOW_LIBRARY = 'GLUT'  # GLFW or GLUT
 TRY_FRAMEBUFFER = True
 GENERATE_TEXTURE_ID_PROBLEM = False  # Follow this global variable to see the error in texture ID generation
 
-SIDE = 800  # window size
+height = 480
+width = 620
 
 # OpenGL version info
 renderer = glGetString(GL_RENDERER)
 version = glGetString(GL_VERSION)
 print('Renderer:', renderer)  # Renderer: b'Intel Iris Pro OpenGL Engine'
 print('OpenGL version supported: ', version)  # OpenGL version supported:  b'4.1 INTEL-10.12.13'
+
+import numpy as np
+
+
+def perspective_projection_matrix(fov, aspect_ratio, near_clip, far_clip):
+    fovy = np.radians(fov)
+
+    # Calculate the projection parameters
+    f = 1.0 / np.tan(fovy / 2.0)
+    z_range = far_clip - near_clip
+    aspect = aspect_ratio
+
+    # Construct the projection matrix
+    projection_matrix = np.array([[f / aspect, 0.0, 0.0, 0.0],
+                                  [0.0, f, 0.0, 0.0],
+                                  [0.0, 0.0, -(far_clip + near_clip) / z_range, -2.0 * far_clip * near_clip / z_range],
+                                  [0.0, 0.0, -1.0, 0.0]], dtype=np.float32)
+    # projection_matrix = np.array([[1.0, 0.0, 0.0, 0.0],
+    #                               [0.0, 1.0, 0.0, 0.0],
+    #                               [0.0, 0.0, 1.0, 0.0],
+    #                               [0.0, 0.0, -1.0, 0.0]], dtype=np.float32)
+
+    return projection_matrix
+
+
+class Camera:
+    def __init__(self, fov, aspect_ratio):
+        self.model_matrix = np.array([[1.0, 0.0, 0.0, 0.0],
+                                      [0.0, 1.0, 0.0, 0.0],
+                                      [0.0, 0.0, 1.0, 0.0],
+                                      [0.0, 0.0, 0.0, 1.0]], dtype=np.float32)
+        self.projection_matrix = perspective_projection_matrix(fov, aspect_ratio, 0.1, 100)
 
 
 # Utility functions
@@ -65,7 +98,7 @@ def make_context():
     # Set window hint NOT visible
     glfw.window_hint(glfw.VISIBLE, False)
     # Create a windowed mode window and its OpenGL context
-    window = glfw.create_window(SIDE, SIDE, "hidden window", None, None)
+    window = glfw.create_window(width, height, "hidden window", None, None)
     if not window:
         glfw.terminate()
         exit(1)
@@ -85,19 +118,22 @@ texture = glGenTextures(1)
 glBindTexture(GL_TEXTURE_2D, texture)
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
 glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, SIDE, SIDE, 0, GL_RGB, GL_UNSIGNED_BYTE, None)
+glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, None)
 glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, texture, 0)
 
 # setup vbo
 vbo = GLuint()
 glGenBuffers(1, vbo)
-glBindBuffer(GL_ARRAY_BUFFER, vbo)
 triangle_data = np.array([
     # Positions   Colors
-    -.5, -.5, 0, 1, 0, 0,
-    .5, -.5, 0, 0, 1, 0,
-    0, .5, 0, 0, 0, 1
+    .5, .5, -1.0, 0, 0, 1,
+    .5, -.5, -1.0, 0, 1, 0,
+    -.5, -.5, -1.0, 1, 0, 0,
+    -.5, -.5, -1.0, 1, 0, 0,
+    -.5, .5, -1.0, 0, 1, 0,
+    .5, .5, -1.0, 0, 0, 1,
 ], dtype=np.float32)
+glBindBuffer(GL_ARRAY_BUFFER, vbo)
 glBufferData(GL_ARRAY_BUFFER, triangle_data, GL_STATIC_DRAW)
 
 # setup vao
@@ -109,24 +145,14 @@ glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, float_size(6), pointer_offset(3)
 glEnableVertexAttribArray(0)
 glEnableVertexAttribArray(1)
 
-# Shaders
-vertex_shader1 = """#version 410
-layout(location = 0) in vec3 pos;
-layout(location = 1) in vec3 col;
-out vec3 fg_color;
-void main () {
-    fg_color = col;
-    gl_Position = vec4(pos, 1.0f);
-}"""
-
-fragment_shader1 = """#version 410
-in vec3 fg_color;
-out vec4 color;
-void main () {
-    color = vec4(fg_color, 1.);
-}"""
+with open('vertex.glsl') as f:
+    vertex_shader1 = f.read()
+with open('fragment.glsl') as f:
+    fragment_shader1 = f.read()
 
 main_shader = create_shader(vertex_shader1, fragment_shader1)
+
+cam = Camera(80, float(width) / height)
 
 
 def draw():
@@ -142,10 +168,17 @@ def draw():
 
     # select shader and draw
     glUseProgram(main_shader)
-    glDrawArrays(GL_TRIANGLES, 0, 3)
 
-    img = glReadPixels(0, 0, SIDE, SIDE, GL_RGB, GL_UNSIGNED_BYTE)
-    img = np.frombuffer(img, dtype=np.uint8).reshape(SIDE, SIDE, 3)
+    model_location = glGetUniformLocation(main_shader, "model")
+    glUniformMatrix4fv(model_location, 1, GL_TRUE, cam.model_matrix)
+    projection_location = glGetUniformLocation(main_shader, "projection")
+    glUniformMatrix4fv(projection_location, 1, GL_TRUE, cam.projection_matrix)
+
+
+    glDrawArrays(GL_TRIANGLES, 0, 6)  # render 3 vert starting at position 0
+
+    img = glReadPixels(0, 0, width, height, GL_RGB, GL_UNSIGNED_BYTE)
+    img = np.frombuffer(img, dtype=np.uint8).reshape((height, width, 3))
     plt.imshow(img)
     plt.gca().invert_yaxis()
     plt.show()
