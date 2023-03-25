@@ -1,5 +1,5 @@
 import matplotlib.pyplot as plt
-from OpenGLRender.OpenGLRender.OpenGLRender import *
+from render import *
 
 
 def run():

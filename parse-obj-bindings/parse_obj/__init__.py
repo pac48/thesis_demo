@@ -3,7 +3,7 @@
 
 from .core import *
 
-__all__ = ['add']
+__all__ = ['loadObj']
 
 #
 version = "0.0.0"

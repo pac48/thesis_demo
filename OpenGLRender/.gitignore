@@ -1,1 +1,3 @@
-OpenGLRender.egg-info/
+build/
+dist/
+*.egg-info/
