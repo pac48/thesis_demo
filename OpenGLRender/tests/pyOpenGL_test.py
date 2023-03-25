@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
-from render import *
+from OpenGLRender.render import *
+import numpy as np
+from parse_obj import *
 
 
 def run():
@@ -8,8 +10,8 @@ def run():
 
     render = OpenGLRender(height, width)
 
-    triangle_data = load_quad()
-    # triangle_data = load_obj()
+    # triangle_data = load_quad()
+    triangle_data = load_obj()
 
     render.setTriangleData(triangle_data)
     render.setupBuffers()
@@ -34,21 +36,17 @@ def load_quad():
 
 
 def load_obj():
-    scene = pywavefront.Wavefront('sawyer.obj', create_materials=True, collect_faces=True)
+    scene = loadObj('sawyer.obj')
+    mesh0 = scene[9]
 
-    mesh0 = scene.mesh_list[2]
-    verts = []
-    for face in mesh0.faces:
-        for ind in face:
-            vert = scene.vertices[ind]
-            verts.extend(vert)
-            verts.extend([.8, 0, 0, 1.0])
+    verts = mesh0[1]
+    verts = verts.reshape((3, -1)).T
+    normals = mesh0[2]
+    normals = normals.reshape((3, -1)).T
+    colors = np.ones((verts.shape[0], 4), dtype=np.float32)
 
-    out = np.array(verts, dtype=np.float32)
+    out = np.hstack((verts, colors, normals))
 
     return out
-
-#
-
 
 run()
