@@ -67,7 +67,7 @@ class CMakeBuild(build_ext):
 
 
 setup(
-    name='pybind11-parse-obj-library-bindings',
+    name='pybind11-parse-urdf-library-bindings',
     version='0.0.0',
     author='Paul Gesel',
     author_email='paulgesel@gmail.com',

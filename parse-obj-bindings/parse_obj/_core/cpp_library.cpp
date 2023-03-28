@@ -3,6 +3,7 @@
 #include <pybind11/stl.h>
 #include <stdexcept>
 #include <sstream>
+#include <unordered_map>
 
 #include "OBJ_Loader.h"
 
@@ -11,7 +12,7 @@ namespace py = pybind11;
 
 template<typename T>
 void free_vector(void* ptr) {
-    std::cout << "freeing memory @ " << ptr << "\n";
+//    std::cout << "freeing memory @ " << ptr << "\n";
     auto v = static_cast<std::vector<T>*>(ptr);
     delete v;
 }
@@ -30,7 +31,16 @@ std::pair<std::vector<T>*, py::capsule> allocateVector(int size=0){
     return {data, capsule};
 }
 
-std::vector<std::tuple<py::array_t<float>, py::array_t<float>, py::array_t<float>, py::array_t<float>> > loadObj(std::string fileName) {
+std::string remove_before_first_underscore(const std::string& str) {
+    size_t underscore_index = str.find('_');
+    if (underscore_index != std::string::npos) {
+        return str.substr(underscore_index + 1);
+    } else {
+        return str;
+    }
+}
+
+std::unordered_map<std::string, std::tuple<py::array_t<float>, py::array_t<float>, py::array_t<float>, py::array_t<float>> > loadObj(std::string fileName) {
 
     objl::Loader Loader;
     bool loadout = Loader.LoadFile(fileName);
@@ -41,7 +51,7 @@ std::vector<std::tuple<py::array_t<float>, py::array_t<float>, py::array_t<float
         return {};
     }
 
-    auto out = std::vector<std::tuple<py::array_t<float>,py::array_t<float>,py::array_t<float>,py::array_t<float> >>();
+    auto out = std::unordered_map<std::string, std::tuple<py::array_t<float>,py::array_t<float>,py::array_t<float>,py::array_t<float> >>();
     int numMeshes = Loader.LoadedMeshes.size();
 
     for (int i = 0; i < numMeshes; i++) {
@@ -87,7 +97,8 @@ std::vector<std::tuple<py::array_t<float>, py::array_t<float>, py::array_t<float
         auto verticesNormalsArr = py::array_t<float>(verticesNormalsP.first->size(), verticesNormalsP.first->data(), verticesNormalsP.second);
         auto verticesTextureCoordinatesArr = py::array_t<float>(verticesTextureCoordinatesP.first->size(), verticesTextureCoordinatesP.first->data(), verticesTextureCoordinatesP.second);
 
-        out.push_back({pointsArr, verticesPositionsArr, verticesNormalsArr, verticesTextureCoordinatesArr});
+        auto key = remove_before_first_underscore(objName);
+        out[key] = {pointsArr, verticesPositionsArr, verticesNormalsArr, verticesTextureCoordinatesArr};
       }
 
 

@@ -128,7 +128,7 @@ namespace py = pybind11;
 
 template<typename T>
 void free_vector(void* ptr) {
-    std::cout << "freeing memory @ " << ptr << "\n";
+//    std::cout << "freeing memory @ " << ptr << "\n";
     auto v = static_cast<std::vector<T>*>(ptr);
     delete v;
 }

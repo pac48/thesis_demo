@@ -41,8 +41,15 @@ class OpenGLRender:
         self.height = height_in
         self.width = width_in
         self.triangle_data = []
-        self.cam = Camera(80, float(width_in) / height_in)
+        self.cam = Camera(40, float(width_in) / height_in)
         self.light_dir = numpy.array([0.0, 0.0, -1.0])
+
+        self.cam.model_matrix[0:3, 0] = [0, 0, 1]
+        self.cam.model_matrix[0:3, 1] = [1, 0, 0]
+        self.cam.model_matrix[0:3, 2] = [0, 1, 0]
+        self.cam.model_matrix[0:3, 3] = [0, -.4, -2]
+
+        self.light_dir = [-.5, .5, -1.0]
 
         self.fbo = []
         self.vbo = []

@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from OpenGLRender.render import *
 import numpy as np
 from parse_obj import *
+from parse_urdf import *
 
 
 def run():
@@ -104,8 +105,9 @@ def load_cube():
 
 
 def load_obj():
-    scene = loadObj('blob.obj')
-    mesh0 = scene[0]
+    scene = loadObj('sawyer.obj')
+
+    mesh0 = scene['right_l0']
 
     verts = mesh0[1]
     verts = verts.reshape((3, -1)).T
