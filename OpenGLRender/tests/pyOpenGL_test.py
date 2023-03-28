@@ -104,8 +104,8 @@ def load_cube():
 
 
 def load_obj():
-    scene = loadObj('sawyer.obj')
-    mesh0 = scene[5]
+    scene = loadObj('blob.obj')
+    mesh0 = scene[0]
 
     verts = mesh0[1]
     verts = verts.reshape((3, -1)).T
